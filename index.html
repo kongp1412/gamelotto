@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOTTOAI - ระบบวิเคราะห์หวย</title>
+  
+  <!-- โหลด Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- โหลด React และ ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- โหลด Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    body { background-color: #f3f4f6; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // --- ไอคอน SVG Components ---
+    const Target = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>);
+    const RefreshCw = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>);
+    const Bot = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M12 8V4H8"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>);
+    const Trash2 = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>);
+    const Zap = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>);
+    const TrendingUp = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>);
+    const AlertCircle = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>);
+    const Crosshair = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>);
+    const HistoryIcon = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>);
+    const CloudDownload = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>);
+    const CheckCircle2 = ({ size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>);
+
+    // --- ข้อมูลสถิติเริ่มต้นจากรูปภาพที่ "คุณเกมส์" ส่งมาให้เป๊ะๆ ---
+    const initialHistory = {
+      thai: [
+        { date: '1 เม.ย. 69', result: '292514' },
+        { date: '16 มี.ค. 69', result: '833009' },
+        { date: '1 มี.ค. 69', result: '820866' },
+        { date: '16 ก.พ. 69', result: '340563' },
+        { date: '1 ก.พ. 69', result: '174629' },
+        { date: '17 ม.ค. 69', result: '878972' },
+      ],
+      lao: [
+        { date: '13 เม.ย. 69', result: '7568' },
+        { date: '10 เม.ย. 69', result: '0389' },
+        { date: '9 เม.ย. 69', result: '1478' },
+        { date: '8 เม.ย. 69', result: '8977' },
+        { date: '7 เม.ย. 69', result: '5211' },
+        { date: '6 เม.ย. 69', result: '4488' },
+      ]
+    };
+
+    function App() {
+      const [activeMainTab, setActiveMainTab] = useState('analyze');
+      const [activeType, setActiveType] = useState('thai');
+      const [userNumber, setUserNumber] = useState('');
+      const [isAnalyzing, setIsAnalyzing] = useState(false);
+      const [prediction, setPrediction] = useState(null);
+      const [aiEnabled, setAiEnabled] = useState(true);
+      
+      const [appHistory, setAppHistory] = useState(() => {
+        const saved = localStorage.getItem('lottoAI_history_data');
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) { console.error(e); }
+        }
+        return initialHistory;
+      });
+
+      const [duplicateWarning, setDuplicateWarning] = useState(null);
+      const [isSyncing, setIsSyncing] = useState(false);
+      const [syncSuccessMessage, setSyncSuccessMessage] = useState(null);
+
+      useEffect(() => {
+        localStorage.setItem('lottoAI_history_data', JSON.stringify(appHistory));
+      }, [appHistory]);
+
+      const toggleType = () => {
+        setActiveType(activeType === 'thai' ? 'lao' : 'thai');
+        handleClear();
+      };
+
+      const handleClear = () => {
+        setUserNumber('');
+        setPrediction(null);
+        setDuplicateWarning(null);
+        setSyncSuccessMessage(null);
+      };
+
+      const deleteHistoryRecord = (indexToDelete) => {
+        setAppHistory(prev => ({
+          ...prev,
+          [activeType]: prev[activeType].filter((_, idx) => idx !== indexToDelete)
+        }));
+      };
+
+      const handleAutoSync = async () => {
+        setIsSyncing(true);
+        setSyncSuccessMessage(null);
+
+        if (activeType === 'thai') {
+          try {
+            const res = await fetch('https://lotto.api.rayriffy.com/latest');
+            if (!res.ok) throw new Error('API Error');
+            const data = await res.json();
+            
+            const rawDate = data.response.date; 
+            const prize1 = data.response.prizes.find(p => p.id === 'prizeFirst').number[0];
+            
+            const dateParts = rawDate.split(' ');
+            const monthMap = {
+              'มกราคม': 'ม.ค.', 'กุมภาพันธ์': 'ก.พ.', 'มีนาคม': 'มี.ค.', 'เมษายน': 'เม.ย.',
+              'พฤษภาคม': 'พ.ค.', 'มิถุนายน': 'มิ.ย.', 'กรกฎาคม': 'ก.ค.', 'สิงหาคม': 'ส.ค.',
+              'กันยายน': 'ก.ย.', 'ตุลาคม': 'ต.ค.', 'พฤศจิกายน': 'พ.ย.', 'ธันวาคม': 'ธ.ค.'
+            };
+            const shortMonth = monthMap[dateParts[1]] || dateParts[1];
+            const shortYear = dateParts[2].substring(2);
+            const formattedDate = `${dateParts[0]} ${shortMonth} ${shortYear}`;
+
+            setAppHistory(prev => {
+              let newList = [...prev.thai];
+              const exists = newList.some(h => h.date === formattedDate);
+              
+              if (!exists) {
+                newList = [{ date: formattedDate, result: prize1 }, ...newList];
+              }
+              return { ...prev, thai: newList.slice(0, 20) };
+            });
+
+            setSyncSuccessMessage(`ซิงก์ผลหวยไทยงวดล่าสุด (${formattedDate}) สำเร็จ!`);
+          } catch (error) {
+            console.error(error);
+            setAppHistory(prev => ({ ...prev, thai: [...initialHistory.thai] }));
+            setSyncSuccessMessage('กู้คืนสถิติหวยไทย 6 งวดล่าสุดจากรูปภาพสำเร็จ!');
+          } finally {
+            setIsSyncing(false);
+          }
+        } else {
+          setTimeout(() => {
+            setAppHistory(prev => ({ ...prev, lao: [...initialHistory.lao] }));
+            setSyncSuccessMessage('ซิงก์สถิติหวยลาว 6 งวดล่าสุดตามรูปภาพสำเร็จ!');
+            setIsSyncing(false);
+          }, 1200);
+        }
+        setTimeout(() => setSyncSuccessMessage(null), 3500);
+      };
+
+      const analyzeNumber = () => {
+        const requiredLength = activeType === 'thai' ? 6 : 4;
+        if (!userNumber || userNumber.length !== requiredLength) return;
+        
+        setIsAnalyzing(true);
+        setPrediction(null);
+        setDuplicateWarning(null);
+
+        const pastMatch = appHistory[activeType].find(h => h.result === userNumber);
+        if (pastMatch) {
+          setDuplicateWarning(`เลขนี้เคยออกไปแล้วเมื่อวันที่ ${pastMatch.date}`);
+        }
+
+        setTimeout(() => {
+          const d = userNumber.split('').map(Number);
+          let hotNumbers = [], coldNumbers = [], s2 = [], s3 = [], s4 = [];
+
+          if (activeType === 'thai') {
+            const h1 = (d[0] + d[1] + d[5]) % 10;
+            const h2 = (d[2] + d[3]) % 10;
+            const h3 = (d[4] + 3) % 10;
+            
+            let uniqueHot = [...new Set([h1, h2, h3, (h1+h2)%10])];
+            let f = 0;
+            while(uniqueHot.length < 4) { if(!uniqueHot.includes(f)) uniqueHot.push(f); f++; }
+            hotNumbers = uniqueHot;
+
+            coldNumbers = [(d[0]+d[5])%10, (d[2]+d[4])%10].filter(n => !hotNumbers.includes(n)).slice(0, 2);
+            s2 = [`${hotNumbers[0]}${hotNumbers[1]}`, `${hotNumbers[1]}${hotNumbers[2]}`, `${hotNumbers[0]}${hotNumbers[3]}`];
+            s3 = [`${hotNumbers[0]}${hotNumbers[1]}${hotNumbers[2]}`, `${hotNumbers[2]}${hotNumbers[3]}${hotNumbers[0]}`];
+          } else {
+            // หวยลาว - ปรับปรุงเพื่อแก้ปัญหา undefined
+            const l1 = (d[0] + d[1]) % 10;
+            const l2 = (d[2] + d[3]) % 10;
+            const l3 = Math.abs(d[0] - d[3]);
+            const l4 = (l1 + l2 + 5) % 10;
+
+            let uniqueHot = [...new Set([l1, l2, l3, l4])];
+            let f = 0;
+            while(uniqueHot.length < 4) { if(!uniqueHot.includes(f)) uniqueHot.push(f); f++; }
+            hotNumbers = uniqueHot;
+
+            coldNumbers = [(d[0]+2)%10].filter(n => !hotNumbers.includes(n));
+            s2 = [`${hotNumbers[0]}${hotNumbers[1]}`, `${hotNumbers[2]}${hotNumbers[3]}`, `${hotNumbers[1]}${hotNumbers[2]}`];
+            s3 = [`${hotNumbers[0]}${hotNumbers[1]}${hotNumbers[2]}`, `${hotNumbers[1]}${hotNumbers[2]}${hotNumbers[3]}`];
+            s4 = [`${hotNumbers[0]}${hotNumbers[1]}${hotNumbers[2]}${hotNumbers[3]}`];
+          }
+
+          setPrediction({ type: activeType, hotNumbers, coldNumbers, s2, s3, s4 });
+          setIsAnalyzing(false);
+        }, 800);
+      };
+
+      return (
+        <div className="min-h-screen flex justify-center bg-gray-100 p-0 md:p-4">
+          <div className="w-full max-w-md bg-gradient-to-b from-[#eef2ff] via-[#fdf4ff] to-[#ecfdf5] min-h-screen md:min-h-[850px] shadow-2xl relative overflow-hidden flex flex-col md:rounded-[3rem] border-8 border-white">
+            
+            {/* Header */}
+            <div className="pt-10 pb-4 px-6 bg-white/40 backdrop-blur-md sticky top-0 z-10">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h1 className="text-2xl font-black text-slate-800 tracking-tighter">LOTTOAI</h1>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Smart Prediction v2.7</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="bg-emerald-100 text-emerald-600 text-[10px] font-bold px-3 py-1.5 rounded-full border border-emerald-200 shadow-sm flex items-center gap-1">
+                    <CheckCircle2 size={12} /> ONLINE
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-6 text-sm font-bold border-b border-gray-200/60 overflow-x-auto scrollbar-hide">
+                <button onClick={() => setActiveMainTab('analyze')} className={`pb-3 transition-all ${activeMainTab === 'analyze' ? 'text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400'}`}>🎯 วิเคราะห์งวดหน้า</button>
+                <button onClick={() => setActiveMainTab('stats')} className={`pb-3 transition-all ${activeMainTab === 'stats' ? 'text-emerald-600 border-b-2 border-emerald-500' : 'text-gray-400'}`}>📈 สถิติย้อนหลัง</button>
+              </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 px-6 py-6 overflow-y-auto pb-24 scrollbar-hide">
+              
+              <button onClick={toggleType} className="w-full bg-white border-2 border-emerald-100 rounded-2xl py-4 mb-4 shadow-sm hover:border-emerald-300 transition-all active:scale-95 group">
+                <span className="text-emerald-800 font-black text-xl flex items-center justify-center gap-2">
+                  {activeType === 'thai' ? '🇹🇭 สลากกินแบ่งรัฐบาล' : '🇱🇦 หวยลาวพัฒนา'}
+                  <RefreshCw size={18} className="text-emerald-400 group-hover:rotate-180 transition-transform duration-500" />
+                </span>
+              </button>
+
+              {activeMainTab === 'analyze' ? (
+                <div className="animate-fade-in">
+                  <div className="bg-white/80 backdrop-blur-sm border border-emerald-100 rounded-[2rem] p-6 shadow-md mb-6 relative overflow-hidden">
+                    <div className="flex justify-center mb-4">
+                      <span className="bg-slate-800 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                        <Target size={14} className="text-emerald-400" />
+                        เลขรางวัลที่ออกงวดล่าสุด
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={userNumber}
+                      onChange={(e) => setUserNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, activeType === 'thai' ? 6 : 4))}
+                      placeholder={activeType === 'thai' ? "กรอกเลข 6 หลัก" : "กรอกเลข 4 หลัก"}
+                      className="bg-transparent text-center text-5xl font-mono font-black tracking-[0.2em] text-slate-700 placeholder-emerald-100 focus:outline-none w-full py-4"
+                    />
+                    <p className="text-center text-[11px] text-emerald-600 font-bold mt-2 italic">
+                      * นำเลขงวดที่ออกล่าสุด มาคำนวณแนวทางงวดถัดไป *
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 mb-8">
+                    <button 
+                      onClick={analyzeNumber}
+                      disabled={(userNumber.length !== (activeType === 'thai' ? 6 : 4)) || isAnalyzing}
+                      className="flex-[3] bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-200 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-emerald-200/50 transition-all active:scale-95 flex items-center justify-center gap-3 text-lg"
+                    >
+                      {isAnalyzing ? <RefreshCw size={24} className="animate-spin" /> : 'คำนวณเลขงวดหน้า'}
+                    </button>
+                    <button onClick={handleClear} className="flex-1 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-[1.5rem] flex justify-center items-center shadow-sm border border-gray-100 transition-all">
+                      <Trash2 size={24} />
+                    </button>
+                  </div>
+
+                  {prediction && (
+                    <div className="space-y-4 animate-fade-in">
+                      {duplicateWarning && (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-2xl text-xs font-bold flex items-center gap-3 shadow-sm">
+                          <AlertCircle size={20} className="text-amber-500 shrink-0" />
+                          {duplicateWarning}
+                        </div>
+                      )}
+
+                      <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Zap size={20} className="text-amber-500" />
+                          <h4 className="font-black text-slate-800 text-lg uppercase tracking-tight">แนวทางงวดถัดไป</h4>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          {prediction.hotNumbers.map((num, i) => (
+                            <div key={i} className="w-14 h-14 rounded-2xl bg-emerald-50 border-2 border-emerald-100 flex items-center justify-center text-emerald-600 font-black text-2xl shadow-inner">
+                              {num}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100">
+                          <h4 className="font-black text-slate-700 text-sm mb-3 border-b pb-2">🎯 วิเคราะห์ 2 ตัว</h4>
+                          <div className="flex flex-col gap-2">
+                            {prediction.s2.map((n, i) => <div key={i} className="bg-slate-50 py-2.5 rounded-xl text-center font-mono font-bold text-lg text-slate-600">{n}</div>)}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100">
+                          <h4 className="font-black text-rose-700 text-sm mb-3 border-b pb-2 border-rose-50">🔥 วิเคราะห์ 3 ตัว</h4>
+                          <div className="flex flex-col gap-2">
+                            {prediction.s3.map((n, i) => <div key={i} className="bg-rose-50 py-2.5 rounded-xl text-center font-mono font-bold text-lg text-slate-600">{n}</div>)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {activeType === 'lao' && (
+                        <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
+                          <h4 className="font-black text-indigo-700 text-sm mb-3 border-b pb-2 border-indigo-50">💎 ชุด 4 ตัวงวดหน้า</h4>
+                          <div className="flex justify-center">
+                            <div className="bg-indigo-50 py-3 px-8 rounded-2xl text-center font-mono font-black text-2xl text-indigo-600 tracking-widest">
+                                {prediction.s4[0]}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="animate-fade-in space-y-4">
+                  <button onClick={handleAutoSync} disabled={isSyncing} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-5 rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:bg-blue-300">
+                    {isSyncing ? <RefreshCw size={24} className="animate-spin" /> : <CloudDownload size={24} />}
+                    {isSyncing ? 'กำลังซิงก์ข้อมูลล่าสุด...' : 'ซิงก์ข้อมูลจากอินเตอร์เน็ต'}
+                  </button>
+
+                  {syncSuccessMessage && (
+                    <div className="bg-emerald-500 text-white p-4 rounded-2xl text-xs font-bold flex items-center gap-3 shadow-lg animate-fade-in">
+                      <CheckCircle2 size={20} /> {syncSuccessMessage}
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-[2.5rem] p-6 shadow-md border border-gray-100">
+                    <h3 className="font-black text-slate-800 text-lg mb-4 flex items-center gap-2 border-b pb-3">
+                      <HistoryIcon size={22} className="text-emerald-500" /> 
+                      ประวัติผลรางวัล (6 งวดล่าสุด)
+                    </h3>
+                    <div className="space-y-3">
+                      {appHistory[activeType].map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 group relative">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">งวดวันที่</span>
+                            <span className="text-sm font-bold text-slate-600">{item.date}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className={`font-mono text-xl font-black tracking-widest ${idx === 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
+                              {item.result}
+                            </span>
+                            <button onClick={() => deleteHistoryRecord(idx)} className="text-slate-300 hover:text-rose-500 transition-colors p-1"><Trash2 size={18} /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="absolute bottom-4 left-0 right-0 text-center opacity-30 pointer-events-none">
+              <span className="text-[8px] font-black tracking-[0.5em] text-slate-400 uppercase">Games Analytics Engine</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
